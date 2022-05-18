@@ -13,4 +13,5 @@ require (
 	github.com/kinecosystem/agora-api v0.26.1
 	github.com/kinecosystem/agora-common v0.85.0
 	github.com/kinecosystem/kin-go v0.8.0
+	github.com/mr-tron/base58 v1.2.0
 )
