@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"strconv"
 
@@ -60,10 +61,41 @@ func main() {
 		KinTokenAccounts []kin.PublicKey
 	}
 
-	var app_user = User{app_user_name, app_public_key, app_hot_wallet, app_token_accounts}
-
 	var test_users []User = make([]User, 0)
 	var prod_users []User = make([]User, 0)
+
+	get_app_user := func() User {
+		return User{app_user_name, app_public_key, app_hot_wallet, app_token_accounts}
+	}
+
+	get_user := func(name string) (*User, error) {
+		fmt.Println("get_user", name)
+		var raw_users []User
+		// var user User
+		if kin_client_env == client.EnvironmentTest {
+			raw_users = test_users
+		} else {
+			raw_users = prod_users
+		}
+
+		if name == "App" {
+			var app_user = get_app_user()
+			return &app_user, nil
+		}
+
+		for i, v := range raw_users {
+			fmt.Println("loop i", i)
+			fmt.Println("loop v", v)
+			fmt.Println("loop v", v.Name)
+
+			if name == v.Name {
+				return &v, nil
+			}
+		}
+
+		return nil, errors.New("No User")
+
+	}
 
 	type SanitisedUser struct {
 		Name      string `json:"name"`
@@ -85,7 +117,7 @@ func main() {
 			raw_users = prod_users
 		}
 
-		users = append(users, get_sanitised_user_data(app_user))
+		users = append(users, get_sanitised_user_data(get_app_user()))
 		for i, raw_user := range raw_users {
 			fmt.Println(i, raw_user)
 			users = append(users, get_sanitised_user_data(raw_user))
@@ -148,14 +180,21 @@ func main() {
 		kin_client = nil
 		fmt.Println("app_index", app_index)
 
-		new_client, err := client.New(env, client.WithAppIndex(app_index), client.WithMaxRetries(0))
-		if err != nil {
+		new_client, new_client_error := client.New(env, client.WithAppIndex(app_index), client.WithMaxRetries(0))
+		if new_client_error != nil {
 			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-			fmt.Println(" - ERROR", err)
+			fmt.Println(" - ERROR", new_client_error)
 			c.Status(400)
 		}
 
+		token_accounts, token_accounts_error := new_client.ResolveTokenAccounts(c, app_hot_wallet.Public())
+		if token_accounts_error != nil {
+			fmt.Println("Something went wrong getting your app token accounts!", token_accounts_error)
+			c.Status(400)
+		}
+
+		app_token_accounts = token_accounts
 		kin_client = new_client
 		kin_client_env = env
 
@@ -193,6 +232,76 @@ func main() {
 
 		fmt.Println("kin_token_accounts", kin_token_accounts)
 		save_user(name, private_key, kin_token_accounts)
+
+		c.Status(200)
+		return
+	})
+
+	router.GET("/balance", func(c *gin.Context) {
+		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+		name := c.Query("user")
+		fmt.Println(" - post /balance", name)
+
+		var user, get_user_error = get_user(name)
+		if get_user_error != nil {
+			fmt.Println("Something went wrong finding your User!", get_user_error)
+			c.Status(400)
+			return
+		}
+
+		var balance_in_quarks, balance_error = kin_client.GetBalance(c, user.PrivateKey.Public())
+		if balance_error != nil {
+			fmt.Println("Something went wrong finding your Balance!", balance_error)
+			c.Status(400)
+			return
+		}
+
+		var balance_in_kin = kin.FromQuarks(balance_in_quarks)
+		fmt.Println("balance_in_kin", balance_in_kin)
+
+		c.String(200, balance_in_kin)
+		return
+	})
+
+	router.POST("/airdrop", func(c *gin.Context) {
+		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+		name := c.Query("to")
+		amount := c.Query("amount")
+		fmt.Println(" - post /airdrop", name, amount)
+
+		// var amount_64, amount_64_error = strconv.ParseInt(amount, 0, 64)
+		// fmt.Println("amount_64_error", amount_64_error)
+		var quarks, quarks_error = kin.ToQuarks(amount)
+		if quarks_error != nil {
+			fmt.Println("Something went wrong finding your quarks!", quarks_error)
+			c.Status(400)
+			return
+		}
+
+		fmt.Println("quarks", quarks)
+
+		var user, get_user_error = get_user(name)
+		if get_user_error != nil {
+			fmt.Println("Something went wrong finding your User!", get_user_error)
+			c.Status(400)
+			return
+		}
+		fmt.Println("user", user.PublicKey)
+		fmt.Println("tokenAccounts", user.KinTokenAccounts)
+
+		var token_account = user.KinTokenAccounts[0]
+		fmt.Println("token_account", token_account)
+
+		var airdrop, airdrop_error = kin_client.RequestAirdrop(c, token_account, uint64(quarks))
+		if airdrop_error != nil {
+			fmt.Println("Something went wrong with your Airdrop!", airdrop_error)
+			c.Status(400)
+			return
+		}
+
+		fmt.Println("airdrop", airdrop)
 
 		c.Status(200)
 		return
