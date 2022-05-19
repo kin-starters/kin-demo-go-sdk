@@ -39,7 +39,6 @@ TODO
 
 ```
 go run main.go
-
 ```
 
 ## Endpoints
