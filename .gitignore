@@ -119,4 +119,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# built go app
+kin-demo-go-sdk
 

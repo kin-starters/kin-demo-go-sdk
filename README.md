@@ -32,12 +32,17 @@ Go Version
 Go Installations
 
 ```
-TODO
+go build
+go install
 ```
 
 ## Start
 
 ```
+./kin-demo-go-sdk
+
+or
+
 go run main.go
 ```
 
