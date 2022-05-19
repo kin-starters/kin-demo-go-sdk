@@ -119,7 +119,4 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# Python virtualenv
-env
 
-__pycache__
