@@ -31,27 +31,27 @@ func main() {
 	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 	fmt.Println("Kin Go SDK App")
 
-	var app_index uint16 = 0
-	var app_index_raw, app_index_err = strconv.ParseInt(os.Getenv("APP_INDEX"), 0, 16)
-	if app_index_err != nil {
-		app_index_raw = 0
+	var appIndex uint16 = 0
+	var appIndexRaw, appIndexError = strconv.ParseInt(os.Getenv("APP_INDEX"), 0, 16)
+	if appIndexError != nil {
+		appIndexRaw = 0
 	} else {
-		app_index = uint16(app_index_raw)
+		appIndex = uint16(appIndexRaw)
 	}
-	fmt.Println("App Index -", app_index)
+	fmt.Println("App Index -", appIndex)
 
-	var kin_client client.Client
-	var kin_client_env = client.EnvironmentTest
+	var kinClient client.Client
+	var kinClientEnv = client.EnvironmentTest
 
-	var app_hot_wallet, app_hot_wallet_err = kin.PrivateKeyFromString((os.Getenv("PRIVATE_KEY")))
-	if app_hot_wallet_err != nil {
-		log.Fatal(app_hot_wallet_err)
+	var appHotWallet, appHotWalletError = kin.PrivateKeyFromString((os.Getenv("PRIVATE_KEY")))
+	if appHotWalletError != nil {
+		log.Fatal(appHotWalletError)
 	}
 
-	var app_token_accounts []kin.PublicKey
-	var app_user_name = "App"
-	var app_public_key = app_hot_wallet.Public().Base58()
-	fmt.Println("App Public Key -", app_public_key)
+	var appTokenAccounts []kin.PublicKey
+	var appUserName = "App"
+	var appPublicKey = appHotWallet.Public().Base58()
+	fmt.Println("App Public Key -", appPublicKey)
 	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
@@ -62,28 +62,28 @@ func main() {
 		KinTokenAccounts []kin.PublicKey
 	}
 
-	var test_users []User = make([]User, 0)
-	var prod_users []User = make([]User, 0)
+	var testUsers []User = make([]User, 0)
+	var prodUsers []User = make([]User, 0)
 
-	get_app_user := func() User {
-		return User{app_user_name, app_public_key, app_hot_wallet, app_token_accounts}
+	getAppUser := func() User {
+		return User{appUserName, appPublicKey, appHotWallet, appTokenAccounts}
 	}
 
-	get_user := func(name string) (*User, error) {
-		var raw_users []User
+	getUser := func(name string) (*User, error) {
+		var rawUsers []User
 		// var user User
-		if kin_client_env == client.EnvironmentTest {
-			raw_users = test_users
+		if kinClientEnv == client.EnvironmentTest {
+			rawUsers = testUsers
 		} else {
-			raw_users = prod_users
+			rawUsers = prodUsers
 		}
 
 		if name == "App" {
-			var app_user = get_app_user()
-			return &app_user, nil
+			var appUser = getAppUser()
+			return &appUser, nil
 		}
 
-		for _, v := range raw_users {
+		for _, v := range rawUsers {
 			if name == v.Name {
 				return &v, nil
 			}
@@ -98,52 +98,52 @@ func main() {
 		PublicKey string `json:"publicKey"`
 	}
 
-	get_sanitised_user_data := func(user User) SanitisedUser {
+	getSanitisedUserData := func(user User) SanitisedUser {
 		var data = SanitisedUser{user.Name, user.PublicKey}
 		return data
 	}
 
-	get_users := func() []SanitisedUser {
-		var raw_users []User
+	getUsers := func() []SanitisedUser {
+		var rawUsers []User
 		var users []SanitisedUser
 
-		if kin_client_env == client.EnvironmentTest {
-			raw_users = test_users
+		if kinClientEnv == client.EnvironmentTest {
+			rawUsers = testUsers
 		} else {
-			raw_users = prod_users
+			rawUsers = prodUsers
 		}
 
-		users = append(users, get_sanitised_user_data(get_app_user()))
-		for _, raw_user := range raw_users {
-			users = append(users, get_sanitised_user_data(raw_user))
+		users = append(users, getSanitisedUserData(getAppUser()))
+		for _, rawUser := range rawUsers {
+			users = append(users, getSanitisedUserData(rawUser))
 		}
 
 		return users
 	}
 
-	save_user := func(name string, private_key kin.PrivateKey, kin_token_accounts []kin.PublicKey) {
-		var new_user = User{name, private_key.Public().Base58(), private_key, kin_token_accounts}
-		if kin_client_env == client.EnvironmentTest {
-			test_users = append(test_users, new_user)
+	saveUser := func(name string, privateKey kin.PrivateKey, kinTokenAccounts []kin.PublicKey) {
+		var newUser = User{name, privateKey.Public().Base58(), privateKey, kinTokenAccounts}
+		if kinClientEnv == client.EnvironmentTest {
+			testUsers = append(testUsers, newUser)
 		} else {
-			prod_users = append(prod_users, new_user)
+			prodUsers = append(prodUsers, newUser)
 		}
 	}
 
 	var transactions []string = make([]string, 0)
 
-	save_transaction := func(transaction_id string) {
-		transactions = append(transactions, transaction_id)
+	saveTransaction := func(transactionId string) {
+		transactions = append(transactions, transactionId)
 	}
 
-	get_transaction_type := func(type_string string) kin.TransactionType {
-		if type_string == "P2P" {
+	getTransactionType := func(typeString string) kin.TransactionType {
+		if typeString == "P2P" {
 			return kin.TransactionTypeP2P
 		}
-		if type_string == "Earn" {
+		if typeString == "Earn" {
 			return kin.TransactionTypeEarn
 		}
-		if type_string == "Spend" {
+		if typeString == "Spend" {
 			return kin.TransactionTypeSpend
 		}
 		return kin.TransactionTypeNone
@@ -155,13 +155,13 @@ func main() {
 		fmt.Println(" - get /status")
 
 		var env = 1
-		var appIndex = 0
-		var users = get_users()
+		var appIndexResponse = 0
+		var users = getUsers()
 
-		if kin_client != nil {
+		if kinClient != nil {
 			fmt.Println("Kin Client - exists")
-			fmt.Println("App Index -", app_index)
-			fmt.Println("Environment -", kin_client_env)
+			fmt.Println("App Index -", appIndex)
+			fmt.Println("Environment -", kinClientEnv)
 
 			for _, v := range users {
 				fmt.Println("user: ", v.Name, v.PublicKey)
@@ -174,48 +174,48 @@ func main() {
 			fmt.Println("Kin Client - nil")
 		}
 
-		if kin_client != nil {
-			appIndex = int(app_index)
+		if kinClient != nil {
+			appIndexResponse = int(appIndex)
 		}
 
-		if kin_client_env == client.EnvironmentProd {
+		if kinClientEnv == client.EnvironmentProd {
 			env = 0
 		}
 
-		c.JSON(200, gin.H{"appIndex": appIndex, "env": env, "users": users, "transactions": transactions})
+		c.JSON(200, gin.H{"appIndex": appIndexResponse, "env": env, "users": users, "transactions": transactions})
 	})
 
 	router.POST("/setup", func(c *gin.Context) {
 		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-		env_string := c.Query("env")
-		fmt.Println(" - post /setup", env_string)
+		envString := c.Query("env")
+		fmt.Println(" - post /setup", envString)
 
 		var env = client.EnvironmentTest
-		if env_string == "Prod" {
+		if envString == "Prod" {
 			env = client.EnvironmentProd
 		}
 
-		kin_client = nil
-		fmt.Println("app_index", app_index)
+		kinClient = nil
+		fmt.Println("appIndex", appIndex)
 
-		new_client, new_client_error := client.New(env, client.WithAppIndex(app_index), client.WithMaxRetries(0))
-		if new_client_error != nil {
+		newClient, newClientError := client.New(env, client.WithAppIndex(appIndex), client.WithMaxRetries(0))
+		if newClientError != nil {
 			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-			fmt.Println(" - ERROR", new_client_error)
+			fmt.Println(" - ERROR", newClientError)
 			c.Status(400)
 		}
 
-		token_accounts, token_accounts_error := new_client.ResolveTokenAccounts(c, app_hot_wallet.Public())
-		if token_accounts_error != nil {
-			fmt.Println("Something went wrong getting your app token accounts!", token_accounts_error)
+		tokenAccounts, tokenAccountsError := newClient.ResolveTokenAccounts(c, appHotWallet.Public())
+		if tokenAccountsError != nil {
+			fmt.Println("Something went wrong getting your app token accounts!", tokenAccountsError)
 			c.Status(400)
 		}
 
-		app_token_accounts = token_accounts
-		kin_client = new_client
-		kin_client_env = env
+		appTokenAccounts = tokenAccounts
+		kinClient = newClient
+		kinClientEnv = env
 
 		c.Status(200)
 	})
@@ -226,28 +226,28 @@ func main() {
 		name := c.Query("name")
 		fmt.Println(" - post /account", name)
 
-		var private_key, private_key_error = kin.NewPrivateKey()
-		if private_key_error != nil {
-			fmt.Println("Something went wrong making your new private key!", private_key_error)
+		var privateKey, privateKeyError = kin.NewPrivateKey()
+		if privateKeyError != nil {
+			fmt.Println("Something went wrong making your new private key!", privateKeyError)
 			c.Status(400)
 
 		}
 
-		var create_account_error = kin_client.CreateAccount(c, private_key)
-		if create_account_error != nil {
-			fmt.Println("Something went wrong creating your account!", create_account_error)
-			c.Status(400)
-			return
-		}
-
-		var kin_token_accounts, resolve_error = kin_client.ResolveTokenAccounts(c, private_key.Public())
-		if resolve_error != nil {
-			fmt.Println("Something went wrong resolving your token accounts!", resolve_error)
+		var createAccountError = kinClient.CreateAccount(c, privateKey)
+		if createAccountError != nil {
+			fmt.Println("Something went wrong creating your account!", createAccountError)
 			c.Status(400)
 			return
 		}
 
-		save_user(name, private_key, kin_token_accounts)
+		var kinTokenAccounts, resolveError = kinClient.ResolveTokenAccounts(c, privateKey.Public())
+		if resolveError != nil {
+			fmt.Println("Something went wrong resolving your token accounts!", resolveError)
+			c.Status(400)
+			return
+		}
+
+		saveUser(name, privateKey, kinTokenAccounts)
 
 		c.Status(200)
 		return
@@ -259,24 +259,24 @@ func main() {
 		name := c.Query("user")
 		fmt.Println(" - post /balance", name)
 
-		var user, get_user_error = get_user(name)
-		if get_user_error != nil {
-			fmt.Println("Something went wrong finding your User!", get_user_error)
+		var user, getUserError = getUser(name)
+		if getUserError != nil {
+			fmt.Println("Something went wrong finding your User!", getUserError)
 			c.Status(400)
 			return
 		}
 
-		var balance_in_quarks, balance_error = kin_client.GetBalance(c, user.PrivateKey.Public())
-		if balance_error != nil {
-			fmt.Println("Something went wrong finding your Balance!", balance_error)
+		var balanceInQuarks, balanceError = kinClient.GetBalance(c, user.PrivateKey.Public())
+		if balanceError != nil {
+			fmt.Println("Something went wrong finding your Balance!", balanceError)
 			c.Status(400)
 			return
 		}
 
-		var balance_in_kin = kin.FromQuarks(balance_in_quarks)
-		fmt.Println("balance_in_kin", balance_in_kin)
+		var balanceInKin = kin.FromQuarks(balanceInQuarks)
+		fmt.Println("balanceInKin", balanceInKin)
 
-		c.String(200, balance_in_kin)
+		c.String(200, balanceInKin)
 		return
 	})
 
@@ -287,34 +287,32 @@ func main() {
 		amount := c.Query("amount")
 		fmt.Println(" - post /airdrop", name, amount)
 
-		// var amount_64, amount_64_error = strconv.ParseInt(amount, 0, 64)
-		// fmt.Println("amount_64_error", amount_64_error)
-		var quarks, quarks_error = kin.ToQuarks(amount)
-		if quarks_error != nil {
-			fmt.Println("Something went wrong finding your quarks!", quarks_error)
+		var quarks, quarksError = kin.ToQuarks(amount)
+		if quarksError != nil {
+			fmt.Println("Something went wrong finding your quarks!", quarksError)
 			c.Status(400)
 			return
 		}
 
-		var user, get_user_error = get_user(name)
-		if get_user_error != nil {
-			fmt.Println("Something went wrong finding your User!", get_user_error)
+		var user, getUserError = getUser(name)
+		if getUserError != nil {
+			fmt.Println("Something went wrong finding your User!", getUserError)
 			c.Status(400)
 			return
 		}
 
-		var token_account = user.KinTokenAccounts[0]
+		var tokenAccount = user.KinTokenAccounts[0]
 
-		var airdrop, airdrop_error = kin_client.RequestAirdrop(c, token_account, uint64(quarks))
-		if airdrop_error != nil {
-			fmt.Println("Something went wrong with your Airdrop!", airdrop_error)
+		var airdrop, airdropError = kinClient.RequestAirdrop(c, tokenAccount, uint64(quarks))
+		if airdropError != nil {
+			fmt.Println("Something went wrong with your Airdrop!", airdropError)
 			c.Status(400)
 			return
 		}
 
-		var transaction_id = base58.Encode(airdrop)
-		fmt.Println("transaction_id", transaction_id)
-		save_transaction(transaction_id)
+		var transactionId = base58.Encode(airdrop)
+		fmt.Println("transactionId", transactionId)
+		saveTransaction(transactionId)
 
 		c.Status(200)
 		return
@@ -334,56 +332,56 @@ func main() {
 		var payload SendKinPayload
 		c.BindJSON(&payload)
 
-		from_name := payload.From
-		to_name := payload.To
+		fromName := payload.From
+		toName := payload.To
 		amount := payload.Amount
-		type_string := payload.Type
-		fmt.Println(" - post /send", from_name, to_name, amount, type_string)
+		typeString := payload.Type
+		fmt.Println(" - post /send", fromName, toName, amount, typeString)
 
-		var quarks, quarks_error = kin.ToQuarks(amount)
-		if quarks_error != nil {
-			fmt.Println("Something went wrong finding your quarks!", quarks_error)
+		var quarks, quarksError = kin.ToQuarks(amount)
+		if quarksError != nil {
+			fmt.Println("Something went wrong finding your quarks!", quarksError)
 			c.Status(400)
 			return
 		}
 
-		var from_user, from_user_error = get_user(from_name)
-		if from_user_error != nil {
-			fmt.Println("Something went wrong finding your User!", from_user_error)
+		var fromUser, fromUserError = getUser(fromName)
+		if fromUserError != nil {
+			fmt.Println("Something went wrong finding your User!", fromUserError)
 			c.Status(400)
 			return
 		}
-		fmt.Println("from_user", from_user.PublicKey)
+		fmt.Println("fromUser", fromUser.PublicKey)
 
-		var to_user, to_user_error = get_user(to_name)
-		if to_user_error != nil {
-			fmt.Println("Something went wrong finding your User!", to_user_error)
+		var toUser, toUserError = getUser(toName)
+		if toUserError != nil {
+			fmt.Println("Something went wrong finding your User!", toUserError)
 			c.Status(400)
 			return
 		}
-		fmt.Println("to_user", to_user.PublicKey)
+		fmt.Println("toUser", toUser.PublicKey)
 
-		var sender = from_user.PrivateKey
-		var destination = to_user.KinTokenAccounts[0]
+		var sender = fromUser.PrivateKey
+		var destination = toUser.KinTokenAccounts[0]
 
-		var transaction_type = get_transaction_type(type_string)
+		var transactionType = getTransactionType(typeString)
 
-		var transaction, transaction_error = kin_client.SubmitPayment(c, client.Payment{
+		var transaction, transactionError = kinClient.SubmitPayment(c, client.Payment{
 			Sender:      sender,
 			Destination: destination,
-			Type:        transaction_type,
+			Type:        transactionType,
 			Quarks:      quarks,
 		})
 
-		if transaction_error != nil {
-			fmt.Println("Something went wrong with your Transaction!", transaction_error)
+		if transactionError != nil {
+			fmt.Println("Something went wrong with your Transaction!", transactionError)
 			c.Status(400)
 			return
 		}
 
-		var transaction_id = base58.Encode(transaction)
-		fmt.Println("transaction_id", transaction_id)
-		save_transaction(transaction_id)
+		var transactionId = base58.Encode(transaction)
+		fmt.Println("transactionId", transactionId)
+		saveTransaction(transactionId)
 
 		c.Status(200)
 		return
@@ -397,7 +395,7 @@ func main() {
 		Memo        string              `json:"memo"`
 	}
 
-	get_sanitised_payment := func(payment client.ReadOnlyPayment) SanitisedPayment {
+	getSanitisedPayment := func(payment client.ReadOnlyPayment) SanitisedPayment {
 		fmt.Println("type", payment.Type)
 		fmt.Println("quarks", payment.Quarks)
 		fmt.Println("sender", payment.Sender.Base58())
@@ -417,37 +415,37 @@ func main() {
 	router.GET("/transaction", func(c *gin.Context) {
 		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-		transaction_id := c.Query("transaction_id")
-		fmt.Println(" - post /transaction", transaction_id)
+		transactionId := c.Query("transaction_id")
+		fmt.Println(" - post /transaction", transactionId)
 
-		transaction_hash, transaction_hash_error := base58.Decode(transaction_id)
-		if transaction_hash_error != nil {
-			fmt.Println("Something went wrong decoding your transaction ID!", transaction_hash_error)
+		transactionHash, transactionHashError := base58.Decode(transactionId)
+		if transactionHashError != nil {
+			fmt.Println("Something went wrong decoding your transaction ID!", transactionHashError)
 			c.Status(400)
 			return
 		}
 
-		var transaction, get_transaction_error = kin_client.GetTransaction(c, transaction_hash)
-		if get_transaction_error != nil {
-			fmt.Println("Something went wrong finding your Transaction!", get_transaction_error)
+		var transaction, getTransactionError = kinClient.GetTransaction(c, transactionHash)
+		if getTransactionError != nil {
+			fmt.Println("Something went wrong finding your Transaction!", getTransactionError)
 			c.Status(400)
 			return
 		}
 
-		var sanitised_payments []SanitisedPayment
+		var sanitisedPayments []SanitisedPayment
 		for _, v := range transaction.Payments {
-			sanitised_payments = append(sanitised_payments, get_sanitised_payment(v))
+			sanitisedPayments = append(sanitisedPayments, getSanitisedPayment(v))
 		}
 
 		fmt.Println("state", transaction.TxState)
-		fmt.Println("payments", sanitised_payments)
+		fmt.Println("payments", sanitisedPayments)
 
-		c.JSON(200, gin.H{"txState": transaction.TxState, "payments": sanitised_payments})
+		c.JSON(200, gin.H{"txState": transaction.TxState, "payments": sanitisedPayments})
 
 	})
 
 	// Webhooks
-	var webhook_secret = os.Getenv("SERVER_WEBHOOK_SECRET")
+	var webhookSecret = os.Getenv("SERVER_WEBHOOK_SECRET")
 
 	eventsHandler := func(events []events.Event) error {
 		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
@@ -460,14 +458,14 @@ func main() {
 				continue
 			}
 
-			var transaction_id = base58.Encode(e.TransactionEvent.TxID)
-			fmt.Println("received event - transaction_id", transaction_id)
+			var transactionId = base58.Encode(e.TransactionEvent.TxID)
+			fmt.Println("received event - transactionId", transactionId)
 		}
 
 		return nil
 	}
 
-	router.POST("/events", gin.WrapH(client.EventsHandler(webhook_secret, eventsHandler)))
+	router.POST("/events", gin.WrapH(client.EventsHandler(webhookSecret, eventsHandler)))
 
 	signTransactionHandler := func(req client.SignTransactionRequest, resp *client.SignTransactionResponse) error {
 		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
@@ -477,17 +475,17 @@ func main() {
 		if err != nil {
 			return err
 		}
-		var transaction_id = base58.Encode(txID)
-		fmt.Println("received sign transaction request - transaction_id", transaction_id)
+		var transactionId = base58.Encode(txID)
+		fmt.Println("received sign transaction request - transactionId", transactionId)
 
 		// Note: Agora will _not_ forward a rejected transaction to the blockchain,
 		//       but it's safer to check that here as well.
 		if resp.IsRejected() {
-			fmt.Println("transaction rejected:  ", transaction_id, len(req.Payments))
+			fmt.Println("transaction rejected:  ", transactionId, len(req.Payments))
 			return nil
 		}
 
-		fmt.Println("transaction approved: ", transaction_id, len(req.Payments))
+		fmt.Println("transaction approved: ", transactionId, len(req.Payments))
 
 		// Note: This allows agora to forward the transaction to the blockchain. However,
 		// it does not indicate that it will be submitted successfully, or that the transaction
@@ -495,9 +493,9 @@ func main() {
 		//
 		// Backends may keep track of the transaction themselves via the req.TxID(), and rely
 		// on either the Events handler or polling to get the status.
-		return resp.Sign(app_hot_wallet)
+		return resp.Sign(appHotWallet)
 	}
-	router.POST("/sign_transaction", gin.WrapH(client.SignTransactionHandler(webhook_secret, signTransactionHandler)))
+	router.POST("/sign_transaction", gin.WrapH(client.SignTransactionHandler(webhookSecret, signTransactionHandler)))
 
 	var port = ":3001"
 	if os.Getenv("PORT") != "" {
