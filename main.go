@@ -387,6 +387,85 @@ func main() {
 		return
 	})
 
+	type BatchPayment struct {
+		To     string `json:"to"`
+		Amount string `json:"amount"`
+	}
+
+	type SendEarnBatchPayload struct {
+		From  string         `json:"from"`
+		Batch []BatchPayment `json:"batch"`
+	}
+
+	getSanitisedBatchEarn := func(payment BatchPayment) (client.Earn, error) {
+		var quarks, quarksError = kin.ToQuarks(payment.Amount)
+		if quarksError != nil {
+			fmt.Println("Something went wrong finding your quarks!", quarksError)
+		}
+
+		var toUser, toUserError = getUser(payment.To)
+		if toUserError != nil {
+			fmt.Println("Something went wrong finding your User!", toUserError)
+		}
+
+		var sanitised = client.Earn{toUser.PrivateKey.Public(), quarks, nil}
+
+		return sanitised, nil
+	}
+
+	router.POST("/earn_batch", func(c *gin.Context) {
+		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+		fmt.Println(" - post /earn_batch")
+
+		var payload SendEarnBatchPayload
+		c.BindJSON(&payload)
+
+		fromName := payload.From
+		batch := payload.Batch
+
+		fmt.Println(" - fromName", fromName)
+		fmt.Println(" - batch", batch)
+
+		var fromUser, fromUserError = getUser(fromName)
+		if fromUserError != nil {
+			fmt.Println("Something went wrong finding your User!", fromUserError)
+			c.Status(400)
+			return
+		}
+		fmt.Println("fromUser", fromUser.PublicKey)
+		var sender = fromUser.PrivateKey
+
+		var earns []client.Earn
+		for _, v := range batch {
+			earn, earnError := getSanitisedBatchEarn((v))
+			if earnError != nil {
+				fmt.Println("Something went wrong getting your Batch Earn!", earnError)
+				c.Status(400)
+				return
+			}
+			earns = append(earns, earn)
+		}
+
+		var transaction, transactionError = kinClient.SubmitEarnBatch(c, client.EarnBatch{
+			Sender: sender,
+			Earns:  earns,
+		})
+
+		if transactionError != nil {
+			fmt.Println("Something went wrong making your batch payment!", transactionError)
+			c.Status(400)
+			return
+		}
+
+		var transactionId = base58.Encode(transaction.TxID)
+		fmt.Println("transactionId", transactionId)
+		saveTransaction(transactionId)
+
+		c.Status(200)
+		return
+	})
+
 	type SanitisedPayment struct {
 		Type        kin.TransactionType `json:"type"`
 		Quarks      int64               `json:"quarks"`
